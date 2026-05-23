@@ -10,6 +10,7 @@ interface Env {
   OPENWEATHER_API_KEY?: string
   AMADEUS_CLIENT_ID?: string
   AMADEUS_CLIENT_SECRET?: string
+  PEXELS_API_KEY?: string
 }
 
 const app = new Hono<{ Bindings: Env }>()
@@ -25,6 +26,7 @@ app.post('/api/chat', async (c) => {
     openweatherApiKey: c.env.OPENWEATHER_API_KEY,
     amadeusClientId: c.env.AMADEUS_CLIENT_ID,
     amadeusClientSecret: c.env.AMADEUS_CLIENT_SECRET,
+    pexelsApiKey: c.env.PEXELS_API_KEY,
   }
 
   const stream = await createChatStream(messages, config)

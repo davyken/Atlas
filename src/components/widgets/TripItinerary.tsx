@@ -1,4 +1,5 @@
-import { MapPin, Calendar, DollarSign, Users, Coffee, Sun, Moon, Lightbulb, Luggage } from 'lucide-react'
+import { useState } from 'react'
+import { MapPin, Calendar, DollarSign, Users, Coffee, Sun, Moon, Lightbulb, Luggage, Bookmark, BookmarkCheck } from 'lucide-react'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface TripDay {
@@ -37,8 +38,25 @@ interface Props {
   data: Record<string, unknown>
 }
 
+function useSaveTrip(trip: TripData) {
+  const key = `atlas_trip_${trip.destination}_${trip.startDate}`
+  const [saved, setSaved] = useState(() => !!localStorage.getItem(key))
+
+  const toggle = () => {
+    if (saved) {
+      localStorage.removeItem(key)
+      setSaved(false)
+    } else {
+      localStorage.setItem(key, JSON.stringify({ ...trip, savedAt: new Date().toISOString() }))
+      setSaved(true)
+    }
+  }
+  return { saved, toggle }
+}
+
 export function TripItinerary({ data }: Props) {
   const trip = data as unknown as TripData
+  const { saved, toggle } = useSaveTrip(trip)
 
   return (
     <div className="stone-card-solid overflow-hidden min-w-[320px] max-w-2xl w-full animate-slide-up">
@@ -54,8 +72,19 @@ export function TripItinerary({ data }: Props) {
               {trip.duration}-day {trip.budget} trip · {trip.travelers} traveler{trip.travelers !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="text-right">
+          <div className="flex flex-col items-end gap-2">
             <span className="amber-badge text-sm">{trip.estimatedBudgetPerDay}/day</span>
+            <button
+              onClick={toggle}
+              className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+                saved
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                  : 'bg-stone-700/40 border-stone-600/40 text-stone-400 hover:text-amber-400 hover:border-amber-500/30'
+              }`}
+            >
+              {saved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+              {saved ? 'Saved' : 'Save trip'}
+            </button>
           </div>
         </div>
 

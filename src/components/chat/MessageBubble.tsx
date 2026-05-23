@@ -7,6 +7,9 @@ import { FlightResults } from '../widgets/FlightCard'
 import { HotelResults } from '../widgets/HotelCard'
 import { DestinationCard } from '../widgets/DestinationCard'
 import { TripItinerary } from '../widgets/TripItinerary'
+import { CurrencyWidget } from '../widgets/CurrencyWidget'
+import { MapWidget } from '../widgets/MapWidget'
+import { PhotoWidget } from '../widgets/PhotoWidget'
 import { ToolLoadingCard } from './ToolLoadingCard'
 
 type ToolInvocation = {
@@ -108,6 +111,12 @@ function ToolResult({ invocation }: { invocation: ToolInvocation }) {
       return <DestinationCard data={data} />
     case 'planTrip':
       return <TripItinerary data={data} />
+    case 'convertCurrency':
+      return <CurrencyWidget data={data} />
+    case 'showMap':
+      return <MapWidget data={data} />
+    case 'getDestinationPhotos':
+      return <PhotoWidget data={data} />
     default:
       return null
   }

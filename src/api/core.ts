@@ -8,6 +8,8 @@ import { classifyIntent } from './router'
 // Specialist system prompts
 // ──────────────────────────────────────────────────────────────
 
+const LANGUAGE_RULE = `\n\n🌐 LANGUAGE: Detect the language of the user's message and always reply in that same language. If they write in French, reply in French. Spanish → Spanish. Arabic → Arabic. Default to English if unsure.`
+
 const WEATHER_PROMPT = `You are ☀️ Atlas Weather — the most enthusiastic meteorologist in the travel world! You LOVE weather (yes, even the rainy days 🌧️).
 
 PERSONALITY:
@@ -32,7 +34,7 @@ You: "Ooh là là, let me check Paris for you! 🗼✨"
 User: "Will it rain in Bali next week?"
 You: "Let me peek into Bali's crystal ball 🔮🌴"
 [call getWeatherForecast]
-"Bali's got some drama planned! 🌦️ A few tropical showers mid-week — but don't worry, they're warm, quick, and honestly make the rice terraces look even MORE magical 😍. Pack: swimsuit, light rain jacket, and zero complaints! 🏄"`
+"Bali's got some drama planned! 🌦️ A few tropical showers mid-week — but don't worry, they're warm, quick, and honestly make the rice terraces look even MORE magical 😍. Pack: swimsuit, light rain jacket, and zero complaints! 🏄"` + LANGUAGE_RULE
 
 const FLIGHTS_PROMPT = `You are ✈️ Atlas Flights — a flight-obsessed travel expert who gets genuinely excited about finding great deals!
 
@@ -58,7 +60,7 @@ You: "Tokyo?! YES. Best. Decision. Ever. 🗾✨ Let me find you a magic carpet�
 User: "Cheap flights to Bali in June"
 You: "Bali in June = peak dry season = GENIUS choice 🌴☀️ Let me hunt those deals down!"
 [call searchFlights]
-"The 6am flight hurts the soul but LOOK at that price 😅💸 Your future self on that Bali beach will forgive you. I promise 🏖️"`
+"The 6am flight hurts the soul but LOOK at that price 😅💸 Your future self on that Bali beach will forgive you. I promise 🏖️"` + LANGUAGE_RULE
 
 const HOTELS_PROMPT = `You are 🏨 Atlas Hotels — a hospitality expert with opinions, taste, and a passion for finding the PERFECT place to sleep!
 
@@ -84,7 +86,7 @@ You: "Tokyo hotel hunting — LET'S GO! 🗾🕹️ Give me those dates and I'll
 User: "Luxury hotels in Dubai"
 You: "LUXURY in DUBAI?! Oh we are NOT playing around today 👑🌆"
 [call searchHotels]
-"The Grand Atlas Palace... I literally gasped 😤✨ Desert views, infinity pool, butler service — this isn't a hotel, it's a LIFESTYLE. Your Instagram will never recover 📸😍"`
+"The Grand Atlas Palace... I literally gasped 😤✨ Desert views, infinity pool, butler service — this isn't a hotel, it's a LIFESTYLE. Your Instagram will never recover 📸😍"` + LANGUAGE_RULE
 
 const PLANNER_PROMPT = `You are 🗺️ Atlas Planner — an elite trip architect who designs unforgettable adventures with passion and creativity!
 
@@ -110,7 +112,32 @@ You: "Bali for 5 days?! I am SO ready for this 🌴😍 Let me craft you somethi
 User: "I want to visit Paris for a week"
 You: "Paris for a WEEK?! *chef's kiss* 🗼💋 The city of croissants, romance, and questionable mime performances..."
 [call getDestinationInfo, getWeather, planTrip]
-"Your Parisian week is going to be *magnifique* ✨🥐 I've hidden a secret: Day 4 afternoon at a hidden wine bar in Le Marais — no tourists, just locals and magic. You're welcome 🍷😊"`
+"Your Parisian week is going to be *magnifique* ✨🥐 I've hidden a secret: Day 4 afternoon at a hidden wine bar in Le Marais — no tourists, just locals and magic. You're welcome 🍷😊"` + LANGUAGE_RULE
+
+const CURRENCY_PROMPT = `You are 💱 Atlas Currency — a friendly finance and travel money expert!
+
+PERSONALITY:
+- Quick, clear, reassuring about money matters
+- Use money emojis: 💱 💰 💵 💶 💷 💴 🏦
+- Add helpful context: "That's actually great value for Tokyo! 🎌"
+- Be conversational, not robotic
+
+RULES:
+- Always call convertCurrency with the exact amount, from, and to currencies
+- After the widget, add a quick travel money tip for that destination
+- Keep it SHORT — the widget shows all the numbers
+
+FEW-SHOT EXAMPLES:
+
+User: "How much is 500 dollars in Japanese yen?"
+You: "Let me crunch those numbers! 💱"
+[call convertCurrency]
+"500 USD goes a long way in Japan! 💴 Cash is still king outside big cities — get yen from an airport ATM for the best rate. 7-Eleven ATMs are surprisingly reliable 🏧"
+
+User: "Convert 200 euros to UAE dirhams"
+You: "Dubai money check! 🌆💶→💰"
+[call convertCurrency]
+"200 euros should cover a nice dinner and a taxi or two in Dubai 😄 Credit cards are widely accepted but always carry some cash for souks and small vendors."` + LANGUAGE_RULE
 
 const GENERAL_PROMPT = `You are 🌍 Atlas — a witty, warm, knowledgeable AI travel companion. Think of yourself as that friend who's been everywhere and always has the best tips.
 
@@ -143,7 +170,7 @@ You: "Oh Japan is *incredible* 🗾 Let me grab the latest tips for you!"
 "The big three things: get a Suica card for transport, carry cash outside cities, and wear slip-on shoes for temples. The bullet trains are genuinely life-changing 🚅 — don't skip them. Oh, and eat ramen at the tiniest spot you can find with a queue outside. Trust me on that one. Want me to plan a full itinerary? 🍜"
 
 User: "Tell me a travel joke"
-You: "Why don't scientists trust atoms when they travel? Because they make up everything — just like hotel WiFi promises! 😂 Okay your turn, where are we sending you? 🌍"`
+You: "Why don't scientists trust atoms when they travel? Because they make up everything — just like hotel WiFi promises! 😂 Okay your turn, where are we sending you? 🌍"` + LANGUAGE_RULE
 
 // ──────────────────────────────────────────────────────────────
 // Config
@@ -155,6 +182,7 @@ export interface ApiConfig {
   openweatherApiKey?: string
   amadeusClientId?: string
   amadeusClientSecret?: string
+  pexelsApiKey?: string
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -270,16 +298,44 @@ export async function createChatStream(messages: unknown[], config: ApiConfig) {
     }),
   }
 
+  const extraTools = {
+    convertCurrency: tool({
+      description: 'Convert an amount from one currency to another using live exchange rates',
+      parameters: z.object({
+        amount: z.number().describe('Amount to convert'),
+        from: z.string().describe('Source currency code, e.g. USD, EUR, GBP, JPY'),
+        to: z.string().describe('Target currency code, e.g. AED, THB, MAD'),
+      }),
+      execute: async ({ amount, from, to }) => convertCurrency(amount, from, to),
+    }),
+    showMap: tool({
+      description: 'Show an interactive map for a destination or city',
+      parameters: z.object({
+        destination: z.string().describe('City or place name to show on the map'),
+      }),
+      execute: async ({ destination }) => geocodeDestination(destination),
+    }),
+    getDestinationPhotos: tool({
+      description: 'Fetch real travel photos of a destination to inspire the traveler',
+      parameters: z.object({
+        destination: z.string().describe('Destination name, e.g. "Santorini Greece" or "Tokyo Japan"'),
+      }),
+      execute: async ({ destination }) => getDestinationPhotos(destination, config.pexelsApiKey),
+    }),
+  }
+
   const specialists = {
     // Web search runs BEFORE domain tools — safe from context overflow
-    weather:        { model: groq('llama-3.3-70b-versatile'), system: WEATHER_PROMPT, tools: { ...weatherTools },                                        maxSteps: 5  },
-    flights:        { model: groq('llama-3.3-70b-versatile'), system: FLIGHTS_PROMPT, tools: { ...flightTools, searchWeb: webTools.searchWeb },           maxSteps: 4  },
-    hotels:         { model: groq('llama-3.3-70b-versatile'), system: HOTELS_PROMPT,  tools: { ...hotelTools,  searchWeb: webTools.searchWeb },           maxSteps: 4  },
+    weather:        { model: groq('llama-3.3-70b-versatile'), system: WEATHER_PROMPT, tools: { ...weatherTools },                                                                       maxSteps: 5 },
+    flights:        { model: groq('llama-3.3-70b-versatile'), system: FLIGHTS_PROMPT, tools: { ...flightTools, searchWeb: webTools.searchWeb, convertCurrency: extraTools.convertCurrency }, maxSteps: 5 },
+    hotels:         { model: groq('llama-3.3-70b-versatile'), system: HOTELS_PROMPT,  tools: { ...hotelTools,  searchWeb: webTools.searchWeb, convertCurrency: extraTools.convertCurrency }, maxSteps: 5 },
     // Destination/planner: domain tools return large JSON — no web tools to avoid overflow
-    'trip-planning':{ model: groq('llama-3.3-70b-versatile'), system: PLANNER_PROMPT, tools: { ...plannerTools },                                         maxSteps: 8  },
-    destination:    { model: groq('llama-3.3-70b-versatile'), system: PLANNER_PROMPT, tools: { getDestinationInfo: plannerTools.getDestinationInfo, getWeather: plannerTools.getWeather }, maxSteps: 4 },
-    // General: pure web search, no heavy domain tools
-    general:        { model: groq('llama-3.1-8b-instant'),    system: GENERAL_PROMPT, tools: { ...webTools },                                             maxSteps: 4  },
+    'trip-planning':{ model: groq('llama-3.3-70b-versatile'), system: PLANNER_PROMPT, tools: { ...plannerTools, getDestinationPhotos: extraTools.getDestinationPhotos, showMap: extraTools.showMap }, maxSteps: 8 },
+    destination:    { model: groq('llama-3.3-70b-versatile'), system: PLANNER_PROMPT, tools: { getDestinationInfo: plannerTools.getDestinationInfo, getWeather: plannerTools.getWeather, getDestinationPhotos: extraTools.getDestinationPhotos, showMap: extraTools.showMap }, maxSteps: 5 },
+    // Currency specialist
+    currency:       { model: groq('llama-3.1-8b-instant'),    system: CURRENCY_PROMPT, tools: { convertCurrency: extraTools.convertCurrency },                                          maxSteps: 3 },
+    // General: web search + currency + map
+    general:        { model: groq('llama-3.1-8b-instant'),    system: GENERAL_PROMPT, tools: { ...webTools, convertCurrency: extraTools.convertCurrency, showMap: extraTools.showMap },  maxSteps: 4 },
   }
 
   const specialist = specialists[intent]
@@ -292,6 +348,83 @@ export async function createChatStream(messages: unknown[], config: ApiConfig) {
     tools: specialist.tools,
     onError: ({ error }) => console.error(`[${intent} specialist error]`, error),
   })
+}
+
+// ──────────────────────────────────────────────────────────────
+// Currency conversion (frankfurter.app — free, no key)
+// ──────────────────────────────────────────────────────────────
+
+async function convertCurrency(amount: number, from: string, to: string) {
+  try {
+    const res = await fetch(
+      `https://api.frankfurter.app/latest?amount=${amount}&from=${from.toUpperCase()}&to=${to.toUpperCase()}`
+    )
+    if (!res.ok) return { error: `Could not convert ${from} to ${to}. Check the currency codes.` }
+    const data = await res.json() as { amount: number; base: string; date: string; rates: Record<string, number> }
+    const converted = data.rates[to.toUpperCase()]
+    if (!converted) return { error: `Currency ${to} not found.` }
+    return {
+      amount,
+      from: from.toUpperCase(),
+      to: to.toUpperCase(),
+      converted,
+      rate: converted / amount,
+      date: data.date,
+    }
+  } catch {
+    return { error: 'Currency conversion failed. Please try again.' }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Geocoding (Nominatim — free, no key)
+// ──────────────────────────────────────────────────────────────
+
+async function geocodeDestination(destination: string) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1`,
+      { headers: { 'User-Agent': 'AtlasTravelApp/1.0' } }
+    )
+    const results = await res.json() as Array<{ lat: string; lon: string; display_name: string }>
+    if (!results.length) return { error: `Could not find location: ${destination}` }
+    return {
+      destination,
+      lat: parseFloat(results[0].lat),
+      lon: parseFloat(results[0].lon),
+    }
+  } catch {
+    return { error: 'Map lookup failed.' }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Destination photos (Pexels — free tier)
+// ──────────────────────────────────────────────────────────────
+
+async function getDestinationPhotos(destination: string, apiKey?: string) {
+  if (!apiKey || apiKey === 'your-pexels-key-here') {
+    return { error: 'Photos unavailable — add PEXELS_API_KEY to enable.' }
+  }
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(destination + ' travel')}&per_page=6&orientation=square`,
+      { headers: { Authorization: apiKey } }
+    )
+    if (!res.ok) return { error: 'Could not fetch photos.' }
+    const data = await res.json() as { photos: Array<{ src: { medium: string }; alt: string; photographer: string; photographer_url: string }> }
+    return {
+      destination,
+      photos: data.photos.map(p => ({
+        url: p.src.medium,
+        alt: p.alt || destination,
+        credit: p.photographer,
+        creditUrl: p.photographer_url,
+      })),
+    }
+  } catch {
+    return { error: 'Photo fetch failed.' }
+  }
 }
 
 // ──────────────────────────────────────────────────────────────

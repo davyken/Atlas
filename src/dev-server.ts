@@ -11,6 +11,7 @@ const config = {
   openweatherApiKey: process.env.OPENWEATHER_API_KEY,
   amadeusClientId: process.env.AMADEUS_CLIENT_ID,
   amadeusClientSecret: process.env.AMADEUS_CLIENT_SECRET,
+  pexelsApiKey: process.env.PEXELS_API_KEY,
 }
 
 async function readBody(req: IncomingMessage): Promise<string> {
