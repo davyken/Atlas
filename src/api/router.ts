@@ -21,7 +21,7 @@ hotels        — hotels, accommodation, rooms, places to stay, Airbnb
 trip-planning — day-by-day itineraries, what to do, activities, full trip plans
 destination   — city/country info, highlights, food scene, best time to visit, local tips, maps
 currency      — currency exchange, money conversion, how much is X in Y currency
-general       — greetings, general travel advice, photos, visa info, anything else`,
+general       — greetings, travel advice, visa info, people, persons, organisations, companies, events, history, science, news, or anything else`,
     prompt,
     maxTokens: 10,
   })
