@@ -1,24 +1,28 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 
-type SpeechRecognitionType = typeof window extends { SpeechRecognition: infer T } ? T :
-  typeof window extends { webkitSpeechRecognition: infer T } ? T : never
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpeechRecognitionType = any
+
+function getSpeechRecognition() {
+  if (typeof window === 'undefined') return null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null
+}
 
 export function useSpeechInput(onResult: (text: string) => void) {
   const [isListening, setIsListening] = useState(false)
-  const [supported, setSupported] = useState(false)
+  const [supported] = useState(true) // always show button; fail gracefully on tap
   const recognitionRef = useRef<InstanceType<SpeechRecognitionType> | null>(null)
 
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || (window as unknown as { webkitSpeechRecognition: typeof window.SpeechRecognition }).webkitSpeechRecognition
-    if (SpeechRecognition) setSupported(true)
-  }, [])
-
   const start = useCallback(() => {
-    const SpeechRecognition = window.SpeechRecognition || (window as unknown as { webkitSpeechRecognition: typeof window.SpeechRecognition }).webkitSpeechRecognition
-    if (!SpeechRecognition) return
+    const SpeechRecognition = getSpeechRecognition()
+    if (!SpeechRecognition) {
+      alert('Voice input is not supported on this browser. Try Chrome on Android or Safari on iPhone (iOS 14.5+).')
+      return
+    }
 
     const recognition = new SpeechRecognition()
-    recognition.lang = 'auto' as string  // browser picks language from device locale
+    recognition.lang = ''  // empty string = use device language automatically
     recognition.continuous = false
     recognition.interimResults = false
     recognition.maxAlternatives = 1
