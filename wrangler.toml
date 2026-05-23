@@ -1,0 +1,11 @@
+name = "atlas-travel"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+main = "src/worker.ts"
+
+[assets]
+directory = "dist"
+not_found_handling = "single-page-application"
+
+# Set all keys as secrets in the Cloudflare dashboard (Workers → Settings → Variables)
+# or via: npx wrangler secret put GROQ_API_KEY

@@ -1,0 +1,96 @@
+import type { Message } from 'ai/react'
+import { Compass, User } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import { WeatherWidget } from '../widgets/WeatherWidget'
+import { WeatherForecastWidget } from '../widgets/WeatherChart'
+import { FlightResults } from '../widgets/FlightCard'
+import { HotelResults } from '../widgets/HotelCard'
+import { DestinationCard } from '../widgets/DestinationCard'
+import { TripItinerary } from '../widgets/TripItinerary'
+import { ToolLoadingCard } from './ToolLoadingCard'
+
+type ToolInvocation = {
+  toolCallId: string
+  toolName: string
+  args: Record<string, unknown>
+  state: 'partial-call' | 'call' | 'result'
+  result?: unknown
+}
+
+interface MessageBubbleProps {
+  message: Message
+}
+
+export function MessageBubble({ message }: MessageBubbleProps) {
+  const isUser = message.role === 'user'
+
+  return (
+    <div className={`flex gap-3 py-3 animate-fade-in ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      {/* Avatar */}
+      <div className={`flex-none w-8 h-8 rounded-xl flex items-center justify-center mt-1
+        ${isUser
+          ? 'bg-stone-700 border border-stone-600'
+          : 'bg-amber-500/10 border border-amber-500/20'
+        }`}>
+        {isUser
+          ? <User className="w-4 h-4 text-stone-300" />
+          : <Compass className="w-4 h-4 text-amber-400" />
+        }
+      </div>
+
+      {/* Content */}
+      <div className={`flex flex-col gap-2 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+        {/* Text */}
+        {message.content && (
+          <div className={isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}>
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="text-sm leading-relaxed">{children}</p>,
+                strong: ({ children }) => <strong className="text-amber-400 font-semibold">{children}</strong>,
+                ul: ({ children }) => <ul className="mt-1 space-y-0.5 list-none">{children}</ul>,
+                li: ({ children }) => (
+                  <li className="flex items-start gap-2 text-sm">
+                    <span className="mt-1.5 w-1 h-1 rounded-full bg-amber-500/60 flex-none" />
+                    {children}
+                  </li>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        )}
+
+        {/* Tool results */}
+        {(message as Message & { toolInvocations?: ToolInvocation[] }).toolInvocations?.map((tool) => (
+          <ToolResult key={tool.toolCallId} invocation={tool} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ToolResult({ invocation }: { invocation: ToolInvocation }) {
+  if (invocation.state !== 'result') {
+    return <ToolLoadingCard toolName={invocation.toolName} />
+  }
+
+  const data = invocation.result as Record<string, unknown>
+
+  switch (invocation.toolName) {
+    case 'getWeather':
+      return <WeatherWidget data={data} />
+    case 'getWeatherForecast':
+      return <WeatherForecastWidget data={data} />
+    case 'searchFlights':
+      return <FlightResults data={data} />
+    case 'searchHotels':
+      return <HotelResults data={data} />
+    case 'getDestinationInfo':
+      return <DestinationCard data={data} />
+    case 'planTrip':
+      return <TripItinerary data={data} />
+    default:
+      return null
+  }
+}

@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --stone-950: #0c0a09;
+    --stone-900: #1c1917;
+    --stone-800: #292524;
+    --stone-700: #44403c;
+    --stone-600: #57534e;
+    --stone-500: #78716c;
+    --stone-400: #a8a29e;
+    --stone-300: #d6d3d1;
+    --stone-200: #e7e5e4;
+    --stone-100: #f5f5f4;
+    --amber-500: #f59e0b;
+    --amber-400: #fbbf24;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    height: 100%;
+    background-color: var(--stone-950);
+    color: var(--stone-100);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    height: 100%;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--stone-900);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--stone-700);
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--stone-600);
+  }
+}
+
+@layer components {
+  .stone-card {
+    @apply bg-stone-800/60 border border-stone-700/60 rounded-2xl backdrop-blur-sm;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .stone-card-solid {
+    @apply bg-stone-800 border border-stone-700 rounded-2xl;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  }
+
+  .amber-badge {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full;
+    background: rgba(245,158,11,0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.25);
+  }
+
+  .chat-bubble-user {
+    @apply bg-stone-700 text-stone-100 rounded-3xl rounded-br-lg px-4 py-3;
+  }
+
+  .chat-bubble-ai {
+    @apply text-stone-200 rounded-3xl rounded-bl-lg px-4 py-3;
+    background: rgba(41,37,36,0.6);
+    border: 1px solid rgba(68,64,60,0.5);
+    backdrop-filter: blur(8px);
+  }
+
+  .weather-gradient {
+    background: linear-gradient(135deg, rgba(41,37,36,0.9) 0%, rgba(28,25,23,0.95) 100%);
+    border: 1px solid rgba(87,83,78,0.4);
+  }
+}
+
+@layer utilities {
+  .text-gradient-amber {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-stone-pattern {
+    background-color: var(--stone-950);
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(87,83,78,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(68,64,60,0.06) 0%, transparent 40%);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 20px rgba(245,158,11,0.12), 0 0 40px rgba(245,158,11,0.06);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.35s ease-out both;
+  }
+
+  .typing-dot {
+    @apply w-2 h-2 rounded-full bg-stone-500;
+    animation: typingDot 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Recharts dark theme */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(68,64,60,0.4);
+}
+
+.recharts-text {
+  fill: #a8a29e;
+  font-size: 11px;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
