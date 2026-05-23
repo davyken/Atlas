@@ -1,0 +1,8 @@
+name = "atlas-travel"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+main = "src/worker.ts"
+
+[assets]
+directory = "."
+not_found_handling = "single-page-application"
