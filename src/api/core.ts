@@ -2,7 +2,7 @@ import { streamText, tool } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 import { z } from 'zod'
 import { tavily } from '@tavily/core'
-import { classifyIntent } from './router'
+import { classifyIntent, type Intent } from './router'
 
 // ──────────────────────────────────────────────────────────────
 // Specialist system prompts
@@ -194,6 +194,8 @@ You: "Let me grab that for you! 🌍"
 
 export interface ApiConfig {
   groqApiKey: string
+  groqApiKey2?: string
+  groqApiKey3?: string
   tavilyApiKey?: string
   openweatherApiKey?: string
   amadeusClientId?: string
@@ -202,18 +204,79 @@ export interface ApiConfig {
 }
 
 // ──────────────────────────────────────────────────────────────
+// Rate limit / error stream helper
+// ──────────────────────────────────────────────────────────────
+
+function parseRetryMinutes(error: unknown): number {
+  const msg = String((error as Record<string, unknown>)?.message || error)
+  // Groq format: "Please try again in 1m23s" or "try again in 45s"
+  const minsMatch = msg.match(/(\d+)m\d*s/)
+  if (minsMatch) return Math.max(1, parseInt(minsMatch[1]) + 1)
+  const secsMatch = msg.match(/try again in (\d+)s/i)
+  if (secsMatch) return Math.max(1, Math.ceil(parseInt(secsMatch[1]) / 60))
+  return 2
+}
+
+function isRateLimit(error: unknown): boolean {
+  const err = error as Record<string, unknown>
+  return err?.status === 429 || err?.statusCode === 429 ||
+    String(err?.message).toLowerCase().includes('rate limit') ||
+    String(err?.message).includes('429')
+}
+
+// Returns an object shaped like StreamTextResult so worker.ts can call .toDataStreamResponse()
+function messageStream(text: string) {
+  return {
+    toDataStreamResponse() {
+      const encoder = new TextEncoder()
+      const body = [
+        `0:${JSON.stringify(text)}\n`,
+        `e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":5}}\n`,
+        `d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":5}}\n`,
+      ].join('')
+      return new Response(encoder.encode(body), {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Vercel-AI-Data-Stream': 'v1',
+        },
+      })
+    },
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
 // Main orchestrator — routes to specialist
 // ──────────────────────────────────────────────────────────────
 
 export async function createChatStream(messages: unknown[], config: ApiConfig) {
-  const groq = createGroq({ apiKey: config.groqApiKey })
+  // Collect all available keys — try them in order when one hits its limit
+  const keys = [config.groqApiKey, config.groqApiKey2, config.groqApiKey3]
+    .filter((k): k is string => !!k && k.length > 10)
 
-  const intent = await classifyIntent(
-    messages as Array<{ role: string; content: unknown }>,
-    config.groqApiKey
-  )
+  // Try each key until one works
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    const isLastKey = i === keys.length - 1
+    const keyLabel = i === 0 ? 'primary' : `backup ${i}`
 
-  const webTools = {
+    let intent: Intent
+    try {
+      intent = await classifyIntent(
+        messages as Array<{ role: string; content: unknown }>,
+        key
+      )
+    } catch (error) {
+      if (isRateLimit(error)) {
+        console.warn(`[Atlas] ${keyLabel} key rate limited during routing`)
+        if (!isLastKey) continue
+        return messageStream(`⏳ All my API keys have hit their hourly limit at the same time! Give me **2–5 minutes** to recharge and I'll be back. Sorry for the wait! 😊`)
+      }
+      throw error
+    }
+
+    const groq = createGroq({ apiKey: key })
+    const webTools = {
     searchWeb: tool({
       description: 'Search the internet for real-time travel information — hotel reviews, flight deals, destination guides, current events, visa requirements, travel advisories, and more.',
       parameters: z.object({
@@ -354,16 +417,29 @@ export async function createChatStream(messages: unknown[], config: ApiConfig) {
     general:        { model: groq('llama-3.3-70b-versatile'), system: GENERAL_PROMPT, tools: { ...webTools, convertCurrency: extraTools.convertCurrency, showMap: extraTools.showMap },  maxSteps: 4 },
   }
 
-  const specialist = specialists[intent]
+    const specialist = specialists[intent]
 
-  return streamText({
-    model: specialist.model,
-    system: specialist.system,
-    messages: messages as Parameters<typeof streamText>[0]['messages'],
-    maxSteps: specialist.maxSteps,
-    tools: specialist.tools,
-    onError: ({ error }) => console.error(`[${intent} specialist error]`, error),
-  })
+    try {
+      return streamText({
+        model: specialist.model,
+        system: specialist.system,
+        messages: messages as Parameters<typeof streamText>[0]['messages'],
+        maxSteps: specialist.maxSteps,
+        tools: specialist.tools,
+        onError: ({ error }) => console.error(`[${intent} key-${i + 1} error]`, error),
+      })
+    } catch (error) {
+      if (isRateLimit(error)) {
+        console.warn(`[Atlas] ${keyLabel} key rate limited during streaming`)
+        if (!isLastKey) continue
+        return messageStream(`⏳ All my API keys have hit their hourly limit! Give me **2–5 minutes** and I'll be back at full speed. Sorry! 😊`)
+      }
+      return messageStream(`😕 Something went wrong on my end. Please try again in a moment!`)
+    }
+  }
+
+  // Should never reach here (keys array is always at least 1)
+  return messageStream(`😕 No API keys configured. Please add a GROQ_API_KEY.`)
 }
 
 // ──────────────────────────────────────────────────────────────

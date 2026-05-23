@@ -7,6 +7,8 @@ const PORT = 8787
 
 const config = {
   groqApiKey: process.env.GROQ_API_KEY || '',
+  groqApiKey2: process.env.GROQ_API_KEY_2,
+  groqApiKey3: process.env.GROQ_API_KEY_3,
   tavilyApiKey: process.env.TAVILY_API_KEY,
   openweatherApiKey: process.env.OPENWEATHER_API_KEY,
   amadeusClientId: process.env.AMADEUS_CLIENT_ID,

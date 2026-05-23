@@ -6,6 +6,8 @@ import { createChatStream, type ApiConfig } from './api/core'
 interface Env {
   ASSETS: Fetcher
   GROQ_API_KEY: string
+  GROQ_API_KEY_2?: string
+  GROQ_API_KEY_3?: string
   TAVILY_API_KEY?: string
   OPENWEATHER_API_KEY?: string
   AMADEUS_CLIENT_ID?: string
@@ -22,6 +24,8 @@ app.post('/api/chat', async (c) => {
 
   const config: ApiConfig = {
     groqApiKey: c.env.GROQ_API_KEY,
+    groqApiKey2: c.env.GROQ_API_KEY_2,
+    groqApiKey3: c.env.GROQ_API_KEY_3,
     tavilyApiKey: c.env.TAVILY_API_KEY,
     openweatherApiKey: c.env.OPENWEATHER_API_KEY,
     amadeusClientId: c.env.AMADEUS_CLIENT_ID,
