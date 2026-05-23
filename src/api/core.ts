@@ -181,6 +181,7 @@ export async function createChatStream(messages: unknown[], config: ApiConfig) {
     messages: messages as Parameters<typeof streamText>[0]['messages'],
     maxSteps: specialist.maxSteps,
     tools: specialist.tools,
+    onError: ({ error }) => console.error(`[${intent} specialist error]`, error),
   })
 }
 
