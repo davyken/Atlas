@@ -340,8 +340,8 @@ export async function createChatStream(messages: unknown[], config: ApiConfig) {
     destination:    { model: groq('llama-3.3-70b-versatile'), system: PLANNER_PROMPT, tools: { getDestinationInfo: plannerTools.getDestinationInfo, getWeather: plannerTools.getWeather, getDestinationPhotos: extraTools.getDestinationPhotos, showMap: extraTools.showMap }, maxSteps: 5 },
     // Currency specialist
     currency:       { model: groq('llama-3.1-8b-instant'),    system: CURRENCY_PROMPT, tools: { convertCurrency: extraTools.convertCurrency },                                          maxSteps: 3 },
-    // General: web search + currency + map
-    general:        { model: groq('llama-3.1-8b-instant'),    system: GENERAL_PROMPT, tools: { ...webTools, convertCurrency: extraTools.convertCurrency, showMap: extraTools.showMap },  maxSteps: 4 },
+    // General: web search + currency + map (70b for reliable tool calling)
+    general:        { model: groq('llama-3.3-70b-versatile'), system: GENERAL_PROMPT, tools: { ...webTools, convertCurrency: extraTools.convertCurrency, showMap: extraTools.showMap },  maxSteps: 4 },
   }
 
   const specialist = specialists[intent]

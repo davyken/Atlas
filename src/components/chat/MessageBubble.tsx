@@ -44,7 +44,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       {/* Content */}
       <div className={`flex flex-col gap-2 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
         {/* Text */}
-        {message.content && (
+        {message.content && (() => {
+          // Strip raw function call leakage from small models e.g. <function=searchWeb>{...}</function>
+          const clean = message.content.replace(/<function=[^>]+>[\s\S]*?<\/function>/g, '').trim()
+          if (!clean) return null
+          return (
           <div className={isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}>
             <ReactMarkdown
               components={{
@@ -77,10 +81,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 hr: () => <hr className="border-stone-700 my-3" />,
               }}
             >
-              {message.content}
+              {clean}
             </ReactMarkdown>
           </div>
-        )}
+          )
+        })()}
 
         {/* Tool results */}
         {(message as Message & { toolInvocations?: ToolInvocation[] }).toolInvocations?.map((tool) => (
