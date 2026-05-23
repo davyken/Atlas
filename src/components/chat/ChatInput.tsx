@@ -1,14 +1,18 @@
 import type { ChangeEvent, FormEvent } from 'react'
-import { ArrowUp, Mic, Paperclip } from 'lucide-react'
+import { ArrowUp, Mic, MicOff } from 'lucide-react'
+import { useSpeechInput } from '../../hooks/useSpeech'
 
 interface ChatInputProps {
   value: string
   onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void
   onSubmit: (e: FormEvent<HTMLFormElement>) => void
+  onVoiceResult: (text: string) => void
   isLoading: boolean
 }
 
-export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputProps) {
+export function ChatInput({ value, onChange, onSubmit, onVoiceResult, isLoading }: ChatInputProps) {
+  const { isListening, supported, toggle } = useSpeechInput(onVoiceResult)
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -21,14 +25,17 @@ export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputPro
 
   return (
     <form onSubmit={onSubmit} className="relative">
-      <div className="flex items-end gap-2 rounded-2xl bg-stone-800/80 border border-stone-700/60
-                      focus-within:border-stone-600 transition-colors px-4 py-3
-                      shadow-[0_4px_24px_rgba(0,0,0,0.3)]">
+      <div className={`flex items-end gap-2 rounded-2xl bg-stone-800/80 border transition-colors px-4 py-3
+                      shadow-[0_4px_24px_rgba(0,0,0,0.3)]
+                      ${isListening
+                        ? 'border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
+                        : 'border-stone-700/60 focus-within:border-stone-600'
+                      }`}>
         <textarea
           value={value}
           onChange={onChange}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about weather, flights, hotels, or plan a trip…"
+          placeholder={isListening ? '🎤 Listening… speak now' : 'Ask about weather, flights, hotels, or plan a trip…'}
           rows={1}
           className="flex-1 bg-transparent text-stone-100 placeholder-stone-500 text-base md:text-sm
                      resize-none outline-none leading-relaxed min-h-[24px] max-h-40
@@ -37,12 +44,21 @@ export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputPro
           disabled={isLoading}
         />
         <div className="flex items-center gap-2 flex-none">
-          <button
-            type="button"
-            className="p-1.5 rounded-lg text-stone-500 hover:text-stone-300 hover:bg-stone-700/60 transition-colors"
-          >
-            <Mic className="w-4 h-4" />
-          </button>
+          {supported && (
+            <button
+              type="button"
+              onClick={toggle}
+              disabled={isLoading}
+              title={isListening ? 'Stop listening' : 'Speak to Atlas'}
+              className={`p-1.5 rounded-lg transition-all duration-200 ${
+                isListening
+                  ? 'text-red-400 bg-red-500/10 animate-pulse'
+                  : 'text-stone-500 hover:text-amber-400 hover:bg-stone-700/60'
+              }`}
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
+          )}
           <button
             type="submit"
             disabled={!value.trim() || isLoading}
@@ -60,7 +76,7 @@ export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputPro
         </div>
       </div>
       <p className="text-center text-stone-600 text-[10px] mt-2">
-        Press Enter to send · Shift+Enter for new line
+        {isListening ? 'Tap 🔴 to stop · Atlas will answer automatically' : 'Press Enter to send · Tap 🎤 to speak'}
       </p>
     </form>
   )

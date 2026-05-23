@@ -4,7 +4,8 @@ import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
 import { TypingIndicator } from './TypingIndicator'
 import { WelcomeScreen } from './WelcomeScreen'
-import { Compass, Bookmark, X, MapPin, Calendar, Trash2 } from 'lucide-react'
+import { Compass, Bookmark, X, MapPin, Calendar, Trash2, Volume2, VolumeX } from 'lucide-react'
+import { useSpeechOutput } from '../../hooks/useSpeech'
 
 interface SavedTrip {
   destination: string
@@ -79,10 +80,27 @@ export function ChatInterface() {
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showSaved, setShowSaved] = useState(false)
+  const [voiceMode, setVoiceMode] = useState(false)
+  const { speak, stop: stopSpeaking, isSpeaking } = useSpeechOutput()
+  const lastSpokenId = useRef<string | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
+
+  // Auto-speak last AI message when voice mode is on
+  useEffect(() => {
+    if (!voiceMode || isLoading) return
+    const last = [...messages].reverse().find(m => m.role === 'assistant')
+    if (last && last.id !== lastSpokenId.current && last.content) {
+      lastSpokenId.current = last.id
+      speak(last.content)
+    }
+  }, [messages, isLoading, voiceMode, speak])
+
+  const handleVoiceResult = (text: string) => {
+    append({ role: 'user', content: text })
+  }
 
   const handleSuggest = (text: string) => {
     append({ role: 'user', content: text })
@@ -103,13 +121,28 @@ export function ChatInterface() {
           </h1>
           <p className="text-stone-500 text-xs mt-0.5">AI Travel Concierge</p>
         </div>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setShowSaved(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-stone-400 hover:text-amber-400 hover:bg-stone-800/60 transition-colors text-xs"
           >
             <Bookmark className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Saved</span>
+          </button>
+          <button
+            onClick={() => { setVoiceMode(v => !v); if (isSpeaking) stopSpeaking() }}
+            title={voiceMode ? 'Voice mode on — tap to mute' : 'Turn on voice mode'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs ${
+              voiceMode
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                : 'text-stone-400 hover:text-amber-400 hover:bg-stone-800/60'
+            }`}
+          >
+            {voiceMode
+              ? <Volume2 className="w-3.5 h-3.5" />
+              : <VolumeX className="w-3.5 h-3.5" />
+            }
+            <span className="hidden sm:inline">{voiceMode ? 'Voice on' : 'Voice'}</span>
           </button>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
@@ -140,6 +173,7 @@ export function ChatInterface() {
             value={input}
             onChange={handleInputChange}
             onSubmit={handleSubmit}
+            onVoiceResult={handleVoiceResult}
             isLoading={isLoading}
           />
         </div>
